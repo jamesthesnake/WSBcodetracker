@@ -3,8 +3,13 @@ import csv
 import re
 import json   
 import requests
+client_ids="YkfkaYL9JKVtOw"
 
-reddit = praw.Reddit()
+client_secrets="z5A3msQ3xWqvHq2a3-KF43tulAA94A"
+
+user_agents="James"
+
+reddit = praw.Reddit(client_id=client_ids,client_secret=client_secrets,user_agent=user_agents,username=usernames,password=passwords)
 
 class StockPost(object):
     def __init__(self, postID, postURL, ups, downs, numComments, stock):
@@ -53,6 +58,7 @@ class SubredditScraper:
         with open('tickers.csv', mode='r') as infile:
             reader = csv.reader(infile)
             for row in reader:
+                row[0]=row[0][:row[0].index(",")]
                 stockTickers[row[0]] = {}
         """Get unique posts from a specified subreddit."""
 
@@ -64,11 +70,13 @@ class SubredditScraper:
         i = 0
         for post in subreddit:
             i = i + 1
-            print(i)
+            print(i,post.title,post.link_flair_text)
             if post.link_flair_text != 'Meme':
                 for stock in stockTickers.keys():
+
                     if(re.search(r'\s+\$?' + stock + r'\$?\s+', post.selftext) or re.search(r'\s+\$?' + stock + r'\$?\s+',  post.title)):
-                        stockTickers[stock][post.id] = StockPost(post.id, post.permalink, post.ups, post.downs, post.num_comments, stock)
+                        print("/n",stock)
+                        stockTickers[str(stock)][post.id] = StockPost(post.id, post.permalink, post.ups, post.downs, post.num_comments, stock)
         for stock in stockTickers:
             if (len(stockTickers[stock]) > 0):
                 for post in stockTickers[stock]:
@@ -77,7 +85,7 @@ class SubredditScraper:
         print(json_object)  
 
 
-        headers = {'Content-type':'application/json', 'Accept':'application/json', 'Flamingo-Signature': "golaaaaa" }
+        headers = {'Content-type':'application/json', 'Accept':'application/json' }
         r = requests.post("https://localhost:44360/api/RedditPostsAdmin", data=json_object,  verify=False, headers=headers)
         print(r.status_code)
         
@@ -85,4 +93,4 @@ class SubredditScraper:
 
 
 if __name__ == '__main__':
-    SubredditScraper('wallstreetbets', lim=200, sort='hot').get_posts()
+    SubredditScraper('wallstreetbets', lim=100, sort='hot').get_posts()
