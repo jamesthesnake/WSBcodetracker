@@ -15,6 +15,7 @@ client_ids="YkfkaYL9JKVtOw"
 client_secrets="z5A3msQ3xWqvHq2a3-KF43tulAA94A"
 
 user_agents="James"
+
 reddit=praw.Reddit(client_id=client_ids,client_secret=client_secrets,user_agent=user_agents,username=usernames,password=passwords)
 
 class StockPost(object):
@@ -58,6 +59,14 @@ def text_blob_sentiment(review, sub_entries_textblob,stockSentiment,stock):
         stockSentiment[stock]['neutral']=stockSentiment[stock]['neutral']+1
         return 'Neutral'
     
+def merge(a, b, path=None):
+    "merges b into a"
+    if path is None: path = []
+    for key in b:
+        if key in a:
+           for item in b[key]:
+               a[key][item] = b[key][item]
+    return a
 
 # sentiment analysis function for VADER tool
 def nltk_sentiment(review, sub_entries_nltk,stockSentiment,stock):
@@ -85,6 +94,13 @@ def nltk_sentiment(review, sub_entries_nltk,stockSentiment,stock):
         sub_entries_nltk['neutral'] = sub_entries_nltk['neutral'] + 1
         stockSentiment[stock]['neutral']=stockSentiment[stock]['neutral']+1
         return 'Neutral'
+def update_stock(stockTickers,stock,post):
+                        stockTickers[str(stock)]['postID'].append(post.id)
+                        stockTickers[str(stock)]['postURL'].append(post.permalink)
+                        stockTickers[str(stock)]['text'].append(post.selftext)
+                        stockTickers[str(stock)]['ups']+=post.ups
+                        stockTickers[str(stock)]['downs']+=post.downs
+                        stockTickers[str(stock)]['numComments']+=post.num_comments
 
 class SubredditScraper:
 
@@ -119,7 +135,8 @@ class SubredditScraper:
             reader = csv.reader(infile)
             for row in reader:
                 row[0]=row[0][:row[0].index(",")]
-                stockTickers[row[0]] = {}
+                stockTickers[row[0]] = {'stock': row[0], 'postID':[], 'postURL': [], 'ups': 0, 'downs': 0, 'text':[], 'numComments': 0,'positive':0,'neutral':0,'negative':0}
+
                 stockSentiment[row[0]] = {'negative': 0, 'positive' : 0, 'neutral' : 0}
         """Get unique posts from a specified subreddit."""
 
@@ -140,14 +157,15 @@ class SubredditScraper:
 
                         text_blob_sentiment(post.title, sub_entries_textblob,stockSentiment,stock)
                         nltk_sentiment(post.title, sub_entries_nltk,stockSentiment,stock)
-                        stockTickers[str(stock)]= StockPost(post.id, post.permalink, post.ups,post.selftext, post.downs, post.num_comments, stock,stockSentiment[stock]['positive'],stockSentiment[stock]['negative'],stockSentiment[stock]['neutral'])
+                        update_stock(stockTickers,stock,post)
        # for stock in stockTickers:
         #    if (len(stockTickers[stock]) > 0):
          #       for post in stockTickers[stock]:
           #          mentionedStocks.append(stockTickers[stock][post]) 
         #json_object = json.dumps(mentionedStocks, default=jsonDefEncoder, indent = 4)   
-       # print(json_object)  
-        print(vars(stockTickers['GME']))
+       # print(json_object) 
+        merge(stockTickers,stockSentiment)
+        print(stockTickers['GME'])
 
         headers = {'Content-type':'application/json', 'Accept':'application/json' }
       #  r = requests.post("https://localhost:44360/api/RedditPostsAdmin", data=json_object,  verify=False, headers=headers)
